@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>NADO Position Sizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4e7;
+      --text-dim: #71717a;
+      --accent: #22c55e;
+      --accent-dim: #16a34a;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --blue: #3b82f6;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 16px;
+      padding-top: env(safe-area-inset-top, 16px);
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .header .subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    .input-group:last-child {
+      margin-bottom: 0;
+    }
+    .input-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .input-label span {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .input-label .hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    input {
+      width: 100%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    input::placeholder {
+      color: var(--text-dim);
+      opacity: 0.5;
+    }
+    .direction-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .direction-btn {
+      flex: 1;
+      padding: 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .direction-btn.long.active {
+      background: rgba(34, 197, 94, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .direction-btn.short.active {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .results {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.02) 100%);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .result-row:last-child {
+      border-bottom: none;
+    }
+    .result-label {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+    .result-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .result-value.highlight {
+      font-size: 24px;
+      color: var(--accent);
+    }
+    .result-value.warning {
+      color: var(--yellow);
+    }
+    .result-value.danger {
+      color: var(--red);
+    }
+    .copy-btn {
+      width: 100%;
+      padding: 18px;
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--bg);
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .copy-btn:active {
+      transform: scale(0.98);
+      background: var(--accent-dim);
+    }
+    .copy-btn.copied {
+      background: var(--blue);
+    }
+    .warning-box {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      display: none;
+    }
+    .warning-box.visible {
+      display: block;
+    }
+    .warning-box p {
+      font-size: 13px;
+      color: var(--yellow);
+      line-height: 1.4;
+    }
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .stat-box {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-box .label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+    }
+    .stat-box .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      padding-bottom: 20px;
+    }
+    .footer p {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .system-badge {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--blue);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="system-badge">MXN v1 2h/45m</div>
+      <h1>NADO SIZER</h1>
+      <p class="subtitle">1% Risk · 10x Leverage · Fees Included</p>
+    </div>
+    <div class="card">
+      <div class="direction-toggle">
+        <button class="direction-btn long active" onclick="setDirection('long')">LONG</button>
+        <button class="direction-btn short" onclick="setDirection('short')">SHORT</button>
+      </div>
+      <div class="input-group">
+        <div class="input-label">
+          <span>Account Size</span>
+          <span class="hint">Total capital</span>
+        </div>
+        <input type="number" id="account" value="100000" inputmode="decimal" onclick="this.select()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">
+          <span>Entry Price</span>
+        </div>
+        <input type="number" id="entry" placeholder="84500" inputmode="decimal" onclick="this.select()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">
+          <span>Stop Price</span>
+        </div>
+        <input type="number" id="stop" placeholder="83200" inputmode="decimal" onclick="this.select()">
+      </div>
+    </div>
+    <div class="card results">
+      <div class="result-row">
+        <span class="result-label">Position Size</span>
+        <span class="result-value highlight" id="positionSize">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Contracts (BTC)</span>
+        <span class="result-value" id="contracts">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Margin Required</span>
+        <span class="result-value" id="margin">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Risk Amount</span>
+        <span class="result-value" id="riskAmount">—</span>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="label">Stop %</div>
+          <div class="value" id="stopPct">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Fees</div>
+          <div class="value" id="fees">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Net Risk</div>
+          <div class="value" id="netRisk">—</div>
+        </div>
+      </div>
+      <button class="copy-btn" id="copyBtn" onclick="copyPosition()">COPY POSITION SIZE</button>
+      <div class="warning-box" id="warningBox">
+        <p>⚠️ Margin exceeds on-exchange balance ($21,498). Transfer funds or reduce position.</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>NADO · Maker 0.01% · Taker 0.035%</p>
+    </div>
+  </div>
+  <script>
+    let direction = 'long';
+    const ON_EXCHANGE_BALANCE = 21498;
+    function setDirection(dir) {
+      direction = dir;
+      document.querySelectorAll('.direction-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`.direction-btn.${dir}`).classList.add('active');
+      calculate();
+    }
+    function calculate() {
+      const account = parseFloat(document.getElementById('account').value) || 0;
+      const entry = parseFloat(document.getElementById('entry').value) || 0;
+      const stop = parseFloat(document.getElementById('stop').value) || 0;
+      if (!account || !entry || !stop) {
+        resetResults();
+        return;
+      }
+      if (direction === 'long' && stop >= entry) {
+        resetResults();
+        return;
+      }
+      if (direction === 'short' && stop <= entry) {
+        resetResults();
+        return;
+      }
+      const riskPercent = 0.01;
+      const riskAmount = account * riskPercent;
+      const leverage = 10;
+      const makerFee = 0.0001;
+      const takerFee = 0.00035;
+      const totalFeeRate = makerFee + takerFee;
+      const stopDistance = Math.abs(entry - stop);
+      const stopPct = (stopDistance / entry) * 100;
+      const positionSize = riskAmount / ((stopDistance / entry) + totalFeeRate);
+      const contracts = positionSize / entry;
+      const marginRequired = positionSize / leverage;
+      const feesAmount = positionSize * totalFeeRate;
+      const netRiskCheck = (positionSize * stopDistance / entry) + feesAmount;
+      document.getElementById('positionSize').textContent = '$' + formatNumber(positionSize);
+      document.getElementById('contracts').textContent = contracts.toFixed(4) + ' BTC';
+      document.getElementById('margin').textContent = '$' + formatNumber(marginRequired);
+      document.getElementById('riskAmount').textContent = '$' + formatNumber(riskAmount);
+      document.getElementById('stopPct').textContent = stopPct.toFixed(2) + '%';
+      document.getElementById('fees').textContent = '$' + formatNumber(feesAmount);
+      document.getElementById('netRisk').textContent = '$' + formatNumber(netRiskCheck);
+      const warningBox = document.getElementById('warningBox');
+      const marginEl = document.getElementById('margin');
+      if (marginRequired > ON_EXCHANGE_BALANCE) {
+        warningBox.classList.add('visible');
+        marginEl.classList.add('danger');
+      } else if (marginRequired > ON_EXCHANGE_BALANCE * 0.8) {
+        warningBox.classList.remove('visible');
+        marginEl.classList.add('warning');
+        marginEl.classList.remove('danger');
+      } else {
+        warningBox.classList.remove('visible');
+        marginEl.classList.remove('warning', 'danger');
+      }
+    }
+    function resetResults() {
+      document.getElementById('positionSize').textContent = '—';
+      document.getElementById('contracts').textContent = '—';
+      document.getElementById('margin').textContent = '—';
+      document.getElementById('riskAmount').textContent = '—';
+      document.getElementById('stopPct').textContent = '—';
+      document.getElementById('fees').textContent = '—';
+      document.getElementById('netRisk').textContent = '—';
+      document.getElementById('warningBox').classList.remove('visible');
+    }
+    function formatNumber(num) {
+      if (num >= 1000) {
+        return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      }
+      return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    }
+    function copyPosition() {
+      const positionText = document.getElementById('positionSize').textContent;
+      if (positionText === '—') return;
+      const value = positionText.replace('$', '').replace(/,/g, '');
+      navigator.clipboard.writeText(value).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'COPIED!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'COPY POSITION SIZE';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
+    }
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', calculate);
+    });
+    calculate();
+  </script>
+</body>
+</html>
