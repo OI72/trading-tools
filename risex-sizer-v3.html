@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RISEx Sizer">
+<title>RISEx Sizer</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #111311;
+    --border: #232823;
+    --text: #e8ece8;
+    --dim: #7a827a;
+    --green: #2fd67b;
+    --green-dim: #1a6e42;
+    --red: #e05252;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  body { min-height:100vh; padding:16px 14px 40px; max-width:520px; margin:0 auto; }
+
+  header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  header h1 { font-size:15px; font-weight:700; letter-spacing:0.08em; }
+  header h1 span { color: var(--green); }
+  #dirBadge { font-size:12px; font-weight:700; padding:3px 10px; border-radius:4px; letter-spacing:0.1em; background:var(--border); color:var(--dim); }
+  #dirBadge.long { background:rgba(47,214,123,0.15); color:var(--green); }
+  #dirBadge.short { background:rgba(224,82,82,0.15); color:var(--red); }
+
+  .field { margin-bottom:12px; }
+  label { display:block; font-size:10px; letter-spacing:0.12em; color:var(--dim); text-transform:uppercase; margin-bottom:5px; }
+  input[type=number] {
+    width:100%; background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font:inherit; font-size:20px; font-weight:600; padding:12px 14px; outline:none;
+    -moz-appearance:textfield;
+  }
+  input[type=number]:focus { border-color: var(--green-dim); }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance:none; }
+  input:disabled { opacity:0.5; }
+
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  .chips { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .chip {
+    font:inherit; font-size:12px; font-weight:600; padding:6px 12px; border-radius:6px;
+    background:var(--panel); border:1px solid var(--border); color:var(--dim); cursor:pointer;
+  }
+  .chip.on { border-color:var(--green); color:var(--green); }
+
+  .seg { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .seg button {
+    flex:1; font:inherit; font-size:12px; font-weight:600; padding:10px 0;
+    background:var(--panel); color:var(--dim); border:none; cursor:pointer;
+  }
+  .seg button.on { background:var(--green-dim); color:#fff; }
+  .seg button.on.red { background:#7a2727; }
+
+  select {
+    width:100%; background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font:inherit; font-size:14px; font-weight:600; padding:11px 14px; outline:none;
+    appearance:none; -webkit-appearance:none;
+  }
+
+  #slDerived { font-size:12px; color:var(--green); margin-top:6px; min-height:16px; font-weight:600; }
+
+  #result { margin-top:20px; border:1px solid var(--green-dim); border-radius:10px; overflow:hidden; }
+  #sizeMain { background:rgba(47,214,123,0.08); padding:16px 14px; text-align:center; }
+  #sizeMain .lbl { font-size:10px; letter-spacing:0.14em; color:var(--dim); text-transform:uppercase; }
+  #sizeMain .val { font-size:34px; font-weight:800; color:var(--green); line-height:1.15; word-break:break-all; }
+  #sizeMain .sub { font-size:13px; color:var(--text); margin-top:2px; }
+  .stats { border-top:1px solid var(--border); }
+  .stat { display:flex; justify-content:space-between; padding:9px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+  .stat:last-child { border-bottom:none; }
+  .stat .k { color:var(--dim); }
+  .stat .v { font-weight:600; }
+  .warn { color:var(--red); font-size:12px; margin-top:10px; text-align:center; min-height:16px; }
+  footer { margin-top:22px; font-size:10px; color:var(--dim); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RISEx <span>SIZER</span></h1>
+  <div id="dirBadge">—</div>
+</header>
+
+<div class="field">
+  <label>Account balance (USDC)</label>
+  <input type="number" id="balance" inputmode="decimal" placeholder="10000">
+</div>
+
+<div class="field">
+  <label>Risk % of account</label>
+  <input type="number" id="riskPct" inputmode="decimal" placeholder="0.5" step="0.01">
+  <div class="chips" id="riskChips">
+    <button class="chip" data-v="0.25">0.25%</button>
+    <button class="chip" data-v="0.33">0.33%</button>
+    <button class="chip" data-v="0.5">0.5%</button>
+    <button class="chip" data-v="1">1%</button>
+  </div>
+</div>
+
+<div class="row">
+  <div class="field">
+    <label>Entry price</label>
+    <input type="number" id="entry" inputmode="decimal" placeholder="65000">
+  </div>
+  <div class="field">
+    <label>Stop-loss price</label>
+    <input type="number" id="stop" inputmode="decimal" placeholder="64200">
+  </div>
+</div>
+
+<div class="row">
+  <div class="field">
+    <label>Entry order</label>
+    <div class="seg" id="entrySeg">
+      <button data-v="maker" class="on">LIMIT (maker)</button>
+      <button data-v="taker">MARKET (taker)</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Fee tier (14d volume)</label>
+    <select id="tier">
+      <option value="1" selected>T1 · $0 · 3.0 / 1.0 bps</option>
+      <option value="2">T2 · $5M · 2.5 / 0.75 bps</option>
+      <option value="3">T3 · $25M · 2.1 / 0.5 bps</option>
+      <option value="4">T4 · $100M · 1.7 / 0.25 bps</option>
+      <option value="5">T5 · $500M · 1.55 / 0 bps</option>
+      <option value="6">T6 · $1B · 1.5 / 0 bps</option>
+    </select>
+  </div>
+</div>
+
+<div id="result" style="display:none">
+  <div id="sizeMain">
+    <div class="lbl">Position size</div>
+    <div class="val" id="sizeBTC">—</div>
+    <div class="sub" id="sizeUSD">—</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="k">Risk amount</span><span class="v" id="riskUSD">—</span></div>
+    <div class="stat"><span class="k">Stop distance</span><span class="v" id="stopDist">—</span></div>
+    <div class="stat"><span class="k">Loss to price at SL</span><span class="v" id="priceLoss">—</span></div>
+    <div class="stat"><span class="k">Fees (entry + SL exit)</span><span class="v" id="feeUSD">—</span></div>
+    <div class="stat"><span class="k">Total loss if stopped</span><span class="v" id="totalLoss">—</span></div>
+    <div class="stat"><span class="k">Min. leverage needed</span><span class="v" id="lev">—</span></div>
+  </div>
+</div>
+<div class="warn" id="warn"></div>
+
+<footer>
+  Full-position sizing (no partials). Fees baked into risk:
+  size = risk$ ÷ (|entry−SL| + entry×fee_in + SL×fee_taker).
+  SL exit always taker (stop-market). Bracket every position (SL+TP on book) at entry.
+</footer>
+
+<script>
+const TIERS = {
+  1:{t:0.000300, m:0.000100},
+  2:{t:0.000250, m:0.0000750},
+  3:{t:0.000210, m:0.0000500},
+  4:{t:0.000170, m:0.0000250},
+  5:{t:0.000155, m:0.0},
+  6:{t:0.000150, m:0.0}
+};
+let entryType = 'maker';
+
+const $ = id => document.getElementById(id);
+const fmt = (n, d=2) => n.toLocaleString('en-US',{minimumFractionDigits:d, maximumFractionDigits:d});
+
+function calc(){
+  const bal = parseFloat($('balance').value);
+  const rp  = parseFloat($('riskPct').value);
+  const e   = parseFloat($('entry').value);
+  const s   = parseFloat($('stop').value);
+  const tier = TIERS[$('tier').value];
+  const warn = $('warn'); warn.textContent = '';
+  const badge = $('dirBadge');
+  if (e>0 && s>0){
+    if (s < e){ badge.textContent='LONG'; badge.className='long'; }
+    else if (s > e){ badge.textContent='SHORT'; badge.className='short'; }
+    else { badge.textContent='—'; badge.className=''; }
+  } else { badge.textContent='—'; badge.className=''; }
+
+  if (!(bal>0 && rp>0 && e>0 && s>0) || e===s){
+    $('result').style.display='none';
+    if (e>0 && s>0 && e===s) warn.textContent='Entry and SL cannot be equal.';
+    return;
+  }
+
+  const riskUSD = bal * rp / 100;
+  const dist = Math.abs(e - s);
+  const fIn = entryType==='maker' ? tier.m : tier.t;
+  const fOut = tier.t;
+  const denom = dist + e*fIn + s*fOut;
+  const size = riskUSD / denom;
+
+  const notional = size * e;
+  const priceLoss = size * dist;
+  const fees = size * (e*fIn + s*fOut);
+  const lev = notional / bal;
+
+  $('result').style.display='block';
+  $('sizeBTC').textContent = size.toFixed(size < 0.01 ? 6 : 4) + ' BTC';
+  $('sizeUSD').textContent = '≈ $' + fmt(notional) + ' notional';
+  $('riskUSD').textContent = '$' + fmt(riskUSD) + ' (' + rp + '%)';
+  $('stopDist').textContent = fmt(dist) + ' (' + fmt(dist/e*100,2) + '%)';
+  $('priceLoss').textContent = '$' + fmt(priceLoss);
+  $('feeUSD').textContent = '$' + fmt(fees,2);
+  $('totalLoss').textContent = '$' + fmt(priceLoss + fees);
+  $('lev').textContent = fmt(lev,2) + 'x';
+
+  if (lev > 20) warn.textContent = 'Leverage above 20x — check RISEx max leverage for this pair.';
+}
+
+document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', calc));
+
+$('riskChips').addEventListener('click', ev => {
+  const b = ev.target.closest('.chip'); if(!b) return;
+  document.querySelectorAll('#riskChips .chip').forEach(c=>c.classList.remove('on'));
+  b.classList.add('on');
+  $('riskPct').value = b.dataset.v;
+  calc();
+});
+
+$('entrySeg').addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if(!b) return;
+  entryType = b.dataset.v;
+  document.querySelectorAll('#entrySeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  calc();
+});
+</script>
+</body>
+</html>
