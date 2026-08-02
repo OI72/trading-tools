@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pre-Trade Gate — RSI Zone</title>
+<style>
+  :root{
+    --bg:#101418;          /* panel charcoal */
+    --card:#171d24;
+    --line:#242d37;
+    --text:#d7dde3;
+    --dim:#6b7684;
+    --steel:#8fa8c0;       /* gate */
+    --turq:#3fd0c9;        /* trigger — his long colour */
+    --amber:#f0a63a;       /* discomfort — heat */
+    --go:#ffd943;          /* yellow — his highest-conviction colour */
+    --nogo:#f0568e;        /* panel pink — losses */
+    --mono:"SF Mono",Consolas,"Cascadia Mono",Menlo,monospace;
+    --sans:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);
+       min-height:100vh;display:flex;justify-content:center;padding:28px 16px}
+  .ticket{width:100%;max-width:430px}
+  header{display:flex;justify-content:space-between;align-items:baseline;
+         border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:18px}
+  header h1{font:600 13px var(--mono);letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+  header .r{font:600 12px var(--mono);color:var(--dim)}
+
+  .step{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:16px;margin-bottom:12px;transition:opacity .25s,border-color .25s}
+  .step.locked{opacity:.35;pointer-events:none}
+  .step.done{border-color:var(--okline)}
+  .tag{font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;
+       display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .tag .dot{width:8px;height:8px;border-radius:50%}
+  #s1 .tag{color:var(--steel)} #s1 .dot{background:var(--steel)}
+  #s2 .tag{color:var(--turq)}  #s2 .dot{background:var(--turq)}
+  #s3 .tag{color:var(--amber)} #s3 .dot{background:var(--amber)}
+
+  .q{font-size:13.5px;line-height:1.45;color:var(--text);margin-bottom:10px}
+  .q em{color:var(--dim);font-style:normal;font-size:12px;display:block;margin-top:2px}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{flex:1;min-width:70px;background:none;border:1px solid var(--line);color:var(--dim);
+        font:600 12px var(--mono);padding:10px 6px;border-radius:7px;cursor:pointer;
+        letter-spacing:.06em;transition:all .15s}
+  .chip:hover{border-color:var(--steel);color:var(--text)}
+  .chip:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+  .chip.on{border-color:var(--steel);color:var(--steel);background:rgba(143,168,192,.08)}
+  .chip.chop{color:var(--dim)}
+  .chip.chop.on{border-color:var(--nogo);color:var(--nogo);background:rgba(240,86,142,.07)}
+
+  textarea{width:100%;background:#10151b;border:1px solid var(--line);border-radius:7px;
+           color:var(--text);font:13px/1.5 var(--sans);padding:10px;resize:none;height:64px}
+  textarea:focus{outline:none;border-color:var(--steel)}
+  .hint{font:11px var(--mono);color:var(--dim);margin-top:6px;min-height:14px}
+  .hint.bad{color:var(--nogo)}
+  .hint.ok{color:var(--steel)}
+
+  .check{display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--line);
+         border-radius:7px;cursor:pointer;transition:border-color .15s;margin-bottom:8px}
+  .check:hover{border-color:var(--turq)}
+  .check input{margin-top:2px;accent-color:var(--turq);width:15px;height:15px;flex-shrink:0}
+  .check span{font-size:13px;line-height:1.4}
+  #s3 .check:hover{border-color:var(--amber)}
+  #s3 .check input{accent-color:var(--amber)}
+
+  .warn{display:none;border:1px solid var(--nogo);border-radius:7px;padding:10px;
+        font-size:12.5px;line-height:1.45;color:var(--nogo);background:rgba(240,86,142,.06)}
+  .warn.show{display:block}
+
+  #verdict{border-radius:10px;padding:18px;text-align:center;margin-top:16px;
+           border:1px dashed var(--line);transition:all .25s}
+  #verdict .big{font:800 17px var(--mono);letter-spacing:.14em}
+  #verdict .sub{font:12px var(--sans);color:var(--dim);margin-top:6px;line-height:1.45}
+  #verdict.wait .big{color:var(--dim)}
+  #verdict.go{border:1px solid var(--go);background:rgba(255,217,67,.07)}
+  #verdict.go .big{color:var(--go)}
+  #verdict.go .sub{color:var(--text)}
+  #verdict.nogo{border:1px solid var(--nogo);background:rgba(240,86,142,.06)}
+  #verdict.nogo .big{color:var(--nogo)}
+  #verdict.nogo .sub{color:var(--text)}
+
+  .reset{width:100%;margin-top:14px;background:none;border:1px solid var(--line);
+         color:var(--dim);font:600 12px var(--mono);letter-spacing:.14em;padding:11px;
+         border-radius:8px;cursor:pointer;text-transform:uppercase}
+  .reset:hover{color:var(--text);border-color:var(--dim)}
+  footer{margin-top:16px;text-align:center;font:11px var(--mono);color:var(--dim);line-height:1.6}
+  @media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="ticket">
+  <header>
+    <h1>Pre-Trade Gate</h1>
+    <div class="r">RSI ZONE &middot; 0.5% / $4,000</div>
+  </header>
+
+  <!-- STEP 1 — GATE -->
+  <section class="step" id="s1">
+    <div class="tag"><span class="dot"></span>1 &middot; Gate — R4 / R5</div>
+    <div class="q">Structure, one word:<em>Two words = Chop. One word or no trade.</em></div>
+    <div class="row" role="group" aria-label="Structure">
+      <button class="chip" data-s="Bull">BULL</button>
+      <button class="chip" data-s="Bear">BEAR</button>
+      <button class="chip" data-s="Range">RANGE</button>
+      <button class="chip chop" data-s="Chop">CHOP&nbsp;/&nbsp;?</button>
+    </div>
+    <div class="q">Thesis, one written sentence:<em>Where price came from, where it goes, who is trapped. No "maybe / unless / if".</em></div>
+    <textarea id="thesis" placeholder="e.g. Bear continuation: rejected W resistance twice, accepting below Jun–Jul POC, late longs trapped above — targeting the fresh local low."></textarea>
+    <div class="hint" id="thesisHint"></div>
+  </section>
+
+  <!-- STEP 2 — TRIGGER -->
+  <section class="step locked" id="s2">
+    <div class="tag"><span class="dot"></span>2 &middot; Trigger</div>
+    <label class="check"><input type="checkbox" id="trig">
+      <span>Valid colour combo fired <b>at a location that serves the sentence above</b> — at MAs / a mapped level, not into overhead or the support my own thesis calls sticky.</span></label>
+  </section>
+
+  <!-- STEP 3 — DISCOMFORT -->
+  <section class="step locked" id="s3">
+    <div class="tag"><span class="dot"></span>3 &middot; Discomfort check</div>
+    <div class="q">How does clicking feel right now?</div>
+    <label class="check"><input type="radio" name="feel" value="pull">
+      <span><b>I feel the pull to skip.</b> Good — that is the price of admission, not a signal. Confirmation.</span></label>
+    <label class="check"><input type="radio" name="feel" value="easy">
+      <span><b>This feels easy / like relief from missing.</b></span></label>
+    <div class="warn" id="easyWarn">Easy usually means late or forced (20.07). Re-answer the gate from the chart — if the sentence still holds, proceed. If you rewrote it to fit the trigger, gate closed.</div>
+  </section>
+
+  <div id="verdict" class="wait">
+    <div class="big">— AWAITING GATE —</div>
+    <div class="sub">The gate opens the trigger. The trigger never opens the gate.</div>
+  </div>
+
+  <button class="reset" id="reset">Next trade — reset</button>
+
+  <footer>Rules own the exits. The Recheck grades obedience, not outcome.<br>
+  Skip after GO = log a reason bigger than one counter-signal.</footer>
+</div>
+
+<script>
+  const chips=[...document.querySelectorAll('.chip')];
+  const s2=document.getElementById('s2'), s3=document.getElementById('s3');
+  const thesis=document.getElementById('thesis'), thesisHint=document.getElementById('thesisHint');
+  const trig=document.getElementById('trig');
+  const feels=[...document.querySelectorAll('input[name=feel]')];
+  const easyWarn=document.getElementById('easyWarn');
+  const verdict=document.getElementById('verdict');
+  const big=verdict.querySelector('.big'), sub=verdict.querySelector('.sub');
+  let structure=null;
+
+  const HEDGES=/\b(maybe|unless|if it|might|not sure|kind of|sort of|possibly|напевно|можливо|якщо)\b/i;
+
+  chips.forEach(c=>c.addEventListener('click',()=>{
+    chips.forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); structure=c.dataset.s; update();
+  }));
+  thesis.addEventListener('input',update);
+  trig.addEventListener('change',update);
+  feels.forEach(f=>f.addEventListener('change',update));
+  document.getElementById('reset').addEventListener('click',()=>{
+    structure=null; chips.forEach(x=>x.classList.remove('on'));
+    thesis.value=''; trig.checked=false; feels.forEach(f=>f.checked=false);
+    update();
+  });
+
+  function gateOpen(){
+    if(structure===null||structure==='Chop') return false;
+    const t=thesis.value.trim();
+    if(t.length<25) return false;
+    if(HEDGES.test(t)) return false;
+    return true;
+  }
+
+  function update(){
+    // thesis hint
+    const t=thesis.value.trim();
+    if(structure==='Chop'){ thesisHint.textContent='Gate closed — chop / unclear. No trade, regardless of trigger.'; thesisHint.className='hint bad'; }
+    else if(t.length===0){ thesisHint.textContent=''; thesisHint.className='hint'; }
+    else if(HEDGES.test(t)){ thesisHint.textContent='Hedge word detected — if the sentence needs it, the context is not readable.'; thesisHint.className='hint bad'; }
+    else if(t.length<25){ thesisHint.textContent='Write the full sentence — the writing is the test.'; thesisHint.className='hint'; }
+    else { thesisHint.textContent='Thesis stated.'; thesisHint.className='hint ok'; }
+
+    const open=gateOpen();
+    s2.classList.toggle('locked',!open);
+    const trigOk=open&&trig.checked;
+    s3.classList.toggle('locked',!trigOk);
+    if(!open){ trig.checked=false; }
+    if(!trigOk){ feels.forEach(f=>f.checked=false); }
+    const feel=feels.find(f=>f.checked)?.value||null;
+    easyWarn.classList.toggle('show',feel==='easy'&&trigOk);
+
+    // verdict
+    verdict.className='wait';
+    if(structure==='Chop'){
+      verdict.className='nogo'; big.textContent='NO TRADE — GATE CLOSED';
+      sub.textContent='Skipping chop is the edge. Log the skip; it is always correct by definition.';
+    } else if(!open){
+      big.textContent='— AWAITING GATE —';
+      sub.textContent='One structure word + one clean sentence opens the gate.';
+    } else if(!trig.checked){
+      big.textContent='GATE OPEN — AWAITING TRIGGER';
+      sub.textContent='Structure defined, thesis written. Now only a valid combo at a serving location matters.';
+    } else if(feel===null){
+      big.textContent='TRIGGER LIVE — CHECK THE FEELING';
+      sub.textContent='Name the feeling before the click. Both answers can lead to GO.';
+    } else if(feel==='pull'){
+      verdict.className='go'; big.textContent='VALID TRADE — EXECUTE';
+      sub.textContent='Gate passed + trigger fired + discomfort present. Bracket it, size 0.5%, rules own the exit.';
+    } else {
+      verdict.className='go'; big.textContent='RE-CHECK GATE — THEN EXECUTE';
+      sub.textContent='If the written sentence survives a fresh look at the chart, this is still a valid trade. If it only survives because of the trigger — it is 20.07 again.';
+    }
+  }
+  update();
+</script>
+</body>
+</html>
